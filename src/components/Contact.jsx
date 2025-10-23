@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 
 const Contact = () => {
   const [status, setStatus] = useState('idle')
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     const form = new FormData(e.currentTarget)
     const name = String(form.get('name') || '').trim()
     const email = String(form.get('email') || '').trim()
@@ -12,15 +14,26 @@ const Contact = () => {
 
     if (!name || !email || !message) {
       setStatus('error')
+      setError('Please fill in all fields.')
       return
     }
 
-    // Simulate submission
-    setStatus('submitting')
-    setTimeout(() => {
+    try {
+      setStatus('submitting')
+      const base = import.meta.env.VITE_BACKEND_URL
+      const res = await fetch(`${base}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message })
+      })
+      if (!res.ok) throw new Error('Failed to send')
+      await res.json()
       setStatus('success')
       e.currentTarget.reset()
-    }, 900)
+    } catch (err) {
+      setStatus('error')
+      setError('Something went wrong. Please try again later.')
+    }
   }
 
   return (
@@ -76,7 +89,7 @@ const Contact = () => {
               <p className="text-sm text-green-700">Thank you — your message has been sent.</p>
             )}
             {status === 'error' && (
-              <p className="text-sm text-red-600">Please fill in all fields.</p>
+              <p className="text-sm text-red-600">{error}</p>
             )}
           </div>
         </form>
